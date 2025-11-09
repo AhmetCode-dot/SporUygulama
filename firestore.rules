@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Kullanıcılar koleksiyonu - kullanıcılar kendi verilerini yazabilir/okuyabilir
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User profiles koleksiyonu - kullanıcılar kendi profillerini yazabilir/okuyabilir
+    match /user_profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Workout sessions koleksiyonu - kullanıcılar sadece kendi antrenmanlarını yazabilir/okuyabilir
+    match /workout_sessions/{sessionId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Exercises koleksiyonu - herkes okuyabilir, sadece admin yazabilir (isteğe bağlı)
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Sadece admin panelinden eklenebilir
+    }
+  }
+}
+

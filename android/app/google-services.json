@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "648540767599",
+    "firebase_url": "https://spor-uygulama-4ddf2-default-rtdb.firebaseio.com",
+    "project_id": "spor-uygulama-4ddf2",
+    "storage_bucket": "spor-uygulama-4ddf2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648540767599:android:aed5cc42b45bfa6175949a",
+        "android_client_info": {
+          "package_name": "com.example.spor_uygulama"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFpThZGe5CMDEZhhkQcRfL0rrsb-dyjus"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
