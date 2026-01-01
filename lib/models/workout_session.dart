@@ -11,6 +11,11 @@ class WorkoutSession {
   final String? notes; // Genel kullanıcı notları
   final int? difficulty; // Zorluk seviyesi (1-5 arası)
   final Map<String, ExerciseDetail> exerciseDetails; // Her egzersiz için detaylar
+  
+  // Program referansları (opsiyonel - plan gününden oluşturulduysa)
+  final String? programId;
+  final int? programWeekIndex;
+  final int? programDayIndex;
 
   WorkoutSession({
     required this.id,
@@ -22,6 +27,9 @@ class WorkoutSession {
     this.notes,
     this.difficulty,
     Map<String, ExerciseDetail>? exerciseDetails,
+    this.programId,
+    this.programWeekIndex,
+    this.programDayIndex,
   }) : exerciseDetails = exerciseDetails ?? {};
 
   Map<String, dynamic> toMap() {
@@ -37,6 +45,9 @@ class WorkoutSession {
       'exerciseDetails': exerciseDetails.map(
         (key, value) => MapEntry(key, value.toMap()),
       ),
+      if (programId != null) 'programId': programId,
+      if (programWeekIndex != null) 'programWeekIndex': programWeekIndex,
+      if (programDayIndex != null) 'programDayIndex': programDayIndex,
     };
   }
 
@@ -59,6 +70,9 @@ class WorkoutSession {
       notes: map['notes'] as String?,
       difficulty: map['difficulty'] as int?,
       exerciseDetails: exerciseDetails,
+      programId: map['programId'] as String?,
+      programWeekIndex: map['programWeekIndex'] as int?,
+      programDayIndex: map['programDayIndex'] as int?,
     );
   }
 

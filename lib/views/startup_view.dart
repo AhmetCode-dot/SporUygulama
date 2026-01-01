@@ -63,7 +63,19 @@ class _StartupViewState extends State<StartupView> {
         return;
       }
 
-      // 4) Her şey tamam → egzersizlere git
+      // 4) Kullanıcının plan/onboarding tercihleri var mı? (user_preferences/<uid>)
+      final prefsDoc = await FirebaseFirestore.instance
+          .collection('user_preferences')
+          .doc(user.uid)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      if (!prefsDoc.exists) {
+        Navigator.pushReplacementNamed(context, '/onboarding-plan');
+        return;
+      }
+
+      // 5) Her şey tamam → egzersizlere git
       Navigator.pushReplacementNamed(context, '/exercise-recommendations');
     } catch (_) {
       // Hata durumunda güvenli rota: welcome

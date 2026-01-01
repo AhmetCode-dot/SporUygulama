@@ -1,0 +1,143 @@
+{
+  "id": "intermediate_muscle_gain_gym_4w4d",
+  "name": "Orta Seviye Kas Kazanma Programı (4 Hafta)",
+  "description": "Spor salonunda, haftada 4 gün, 45-60 dakikalık orta seviye kas kazanma programı. Split antrenman sistemi ile göğüs, sırt, bacak ve tüm vücut odaklı.",
+  "goals": ["Kas yapmak"],
+  "experienceLevels": ["intermediate"],
+  "totalWeeks": 4,
+  "daysPerWeek": 4,
+  "recommendedSessionDurationMin": 50,
+  "focusBodyRegions": ["Göğüs", "Sırt", "Bacak", "Omuz", "Kol", "Karın"],
+  "requiredEquipment": ["Dumbell", "Cable Makine", "Koşu Bandı"],
+  "days": [
+    {
+      "weekIndex": 1,
+      "dayIndex": 1,
+      "title": "Göğüs + Omuz",
+      "description": "Göğüs ve omuz kaslarını hedefleyen antrenman. Bench press, dumbbell press ve omuz egzersizleri.",
+      "bodyRegions": ["Göğüs", "Omuz"],
+      "exerciseIds": ["dumbbell_press", "pushups", "bench_press", "arnold_press", "barbell_front_raise"]
+    },
+    {
+      "weekIndex": 1,
+      "dayIndex": 2,
+      "title": "Sırt + Kol",
+      "description": "Sırt ve kol kaslarını güçlendiren antrenman. Pull-ups, cable row ve biceps/triceps egzersizleri.",
+      "bodyRegions": ["Sırt", "Kol"],
+      "exerciseIds": ["pullups", "cable_row", "cable_lat_pulldown", "biceps_curls", "cable_tricep_pushdowns"]
+    },
+    {
+      "weekIndex": 1,
+      "dayIndex": 3,
+      "title": "Bacak + Karın",
+      "description": "Alt vücut ve karın kaslarını hedefleyen antrenman. Squats, lunges ve core egzersizleri.",
+      "bodyRegions": ["Bacak", "Karın"],
+      "exerciseIds": ["squats", "lunges", "barbell_squats", "plank", "crunches"]
+    },
+    {
+      "weekIndex": 1,
+      "dayIndex": 4,
+      "title": "Tüm Vücut",
+      "description": "Tüm kas gruplarını çalıştıran full body antrenman. Kompleks hareketler ve kardiyovasküler egzersizler.",
+      "bodyRegions": ["Tüm vücut"],
+      "exerciseIds": ["squats", "pushups", "pullups", "plank", "jumping_jacks"]
+    },
+    {
+      "weekIndex": 2,
+      "dayIndex": 1,
+      "title": "Göğüs + Omuz",
+      "description": "Göğüs ve omuz kaslarını hedefleyen antrenman. Bench press, dumbbell press ve omuz egzersizleri.",
+      "bodyRegions": ["Göğüs", "Omuz"],
+      "exerciseIds": ["dumbbell_press", "pushups", "bench_press", "arnold_press", "barbell_front_raise"]
+    },
+    {
+      "weekIndex": 2,
+      "dayIndex": 2,
+      "title": "Sırt + Kol",
+      "description": "Sırt ve kol kaslarını güçlendiren antrenman. Pull-ups, cable row ve biceps/triceps egzersizleri.",
+      "bodyRegions": ["Sırt", "Kol"],
+      "exerciseIds": ["pullups", "cable_row", "cable_lat_pulldown", "biceps_curls", "cable_tricep_pushdowns"]
+    },
+    {
+      "weekIndex": 2,
+      "dayIndex": 3,
+      "title": "Bacak + Karın",
+      "description": "Alt vücut ve karın kaslarını hedefleyen antrenman. Squats, lunges ve core egzersizleri.",
+      "bodyRegions": ["Bacak", "Karın"],
+      "exerciseIds": ["squats", "lunges", "barbell_squats", "plank", "crunches"]
+    },
+    {
+      "weekIndex": 2,
+      "dayIndex": 4,
+      "title": "Tüm Vücut",
+      "description": "Tüm kas gruplarını çalıştıran full body antrenman. Kompleks hareketler ve kardiyovasküler egzersizler.",
+      "bodyRegions": ["Tüm vücut"],
+      "exerciseIds": ["squats", "pushups", "pullups", "plank", "jumping_jacks"]
+    },
+    {
+      "weekIndex": 3,
+      "dayIndex": 1,
+      "title": "Göğüs + Omuz",
+      "description": "Göğüs ve omuz kaslarını hedefleyen antrenman. Bench press, dumbbell press ve omuz egzersizleri.",
+      "bodyRegions": ["Göğüs", "Omuz"],
+      "exerciseIds": ["dumbbell_press", "pushups", "bench_press", "arnold_press", "barbell_front_raise"]
+    },
+    {
+      "weekIndex": 3,
+      "dayIndex": 2,
+      "title": "Sırt + Kol",
+      "description": "Sırt ve kol kaslarını güçlendiren antrenman. Pull-ups, cable row ve biceps/triceps egzersizleri.",
+      "bodyRegions": ["Sırt", "Kol"],
+      "exerciseIds": ["pullups", "cable_row", "cable_lat_pulldown", "biceps_curls", "cable_tricep_pushdowns"]
+    },
+    {
+      "weekIndex": 3,
+      "dayIndex": 3,
+      "title": "Bacak + Karın",
+      "description": "Alt vücut ve karın kaslarını hedefleyen antrenman. Squats, lunges ve core egzersizleri.",
+      "bodyRegions": ["Bacak", "Karın"],
+      "exerciseIds": ["squats", "lunges", "barbell_squats", "plank", "crunches"]
+    },
+    {
+      "weekIndex": 3,
+      "dayIndex": 4,
+      "title": "Tüm Vücut",
+      "description": "Tüm kas gruplarını çalıştıran full body antrenman. Kompleks hareketler ve kardiyovasküler egzersizler.",
+      "bodyRegions": ["Tüm vücut"],
+      "exerciseIds": ["squats", "pushups", "pullups", "plank", "jumping_jacks"]
+    },
+    {
+      "weekIndex": 4,
+      "dayIndex": 1,
+      "title": "Göğüs + Omuz",
+      "description": "Göğüs ve omuz kaslarını hedefleyen antrenman. Bench press, dumbbell press ve omuz egzersizleri.",
+      "bodyRegions": ["Göğüs", "Omuz"],
+      "exerciseIds": ["dumbbell_press", "pushups", "bench_press", "arnold_press", "barbell_front_raise"]
+    },
+    {
+      "weekIndex": 4,
+      "dayIndex": 2,
+      "title": "Sırt + Kol",
+      "description": "Sırt ve kol kaslarını güçlendiren antrenman. Pull-ups, cable row ve biceps/triceps egzersizleri.",
+      "bodyRegions": ["Sırt", "Kol"],
+      "exerciseIds": ["pullups", "cable_row", "cable_lat_pulldown", "biceps_curls", "cable_tricep_pushdowns"]
+    },
+    {
+      "weekIndex": 4,
+      "dayIndex": 3,
+      "title": "Bacak + Karın",
+      "description": "Alt vücut ve karın kaslarını hedefleyen antrenman. Squats, lunges ve core egzersizleri.",
+      "bodyRegions": ["Bacak", "Karın"],
+      "exerciseIds": ["squats", "lunges", "barbell_squats", "plank", "crunches"]
+    },
+    {
+      "weekIndex": 4,
+      "dayIndex": 4,
+      "title": "Tüm Vücut",
+      "description": "Tüm kas gruplarını çalıştıran full body antrenman. Kompleks hareketler ve kardiyovasküler egzersizler.",
+      "bodyRegions": ["Tüm vücut"],
+      "exerciseIds": ["squats", "pushups", "pullups", "plank", "jumping_jacks"]
+    }
+  ]
+}
+

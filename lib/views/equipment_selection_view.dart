@@ -19,6 +19,7 @@ class _EquipmentSelectionViewState extends State<EquipmentSelectionView> {
     'Barfiks Demiri': false,
     'Egzersiz Bandı': false,
     'Koşu Bandı': false,
+    'Cable Makine': false,
     'Vücut Ağırlığı ile Çalışıyorum': false,
   };
 

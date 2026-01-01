@@ -37,8 +37,14 @@ dependencies:
   firebase_core: ^2.24.2
   firebase_auth: ^4.15.3
   cloud_firestore: ^4.13.6
+  firebase_messaging: ^14.7.9
+  firebase_storage: ^11.6.0
+  file_picker: ^6.1.1
   js: ^0.7.2
   video_player: ^2.8.2
+  cached_network_image: ^3.3.1
+  flutter_local_notifications: ^16.3.0
+  timezone: ^0.9.2
 
 dev_dependencies:
   flutter_test:
@@ -64,22 +70,7 @@ flutter:
 
   assets:
     - assets/fitness_bg.jpg
-    - assets/exercises/pullup.jpg
-    - assets/exercises/plank.jpg
-    - assets/exercises/crunches.jpg
-    - assets/exercises/pushups.jpg
-    - assets/exercises/dumbelchestpress.jpg
-    - assets/exercises/squat.jpg
-    - assets/exercises/lunge.jpg
-    - assets/exercises/jumpingjack.jpg
-    - assets/exercises/Pullup.gif.mp4
-    - assets/exercises/plank.mp4
-    - assets/exercises/Crunches.mp4
-    - assets/exercises/Pushup.mp4
-    - assets/exercises/dumbbell_press.mp4
-    - assets/exercises/Squat.mp4
-    - assets/exercises/Lunge.mp4
-    - assets/exercises/Jump.mp4
+    - assets/exercises/
 
     
     

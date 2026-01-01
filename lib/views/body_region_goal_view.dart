@@ -20,6 +20,7 @@ class _BodyRegionGoalViewState extends State<BodyRegionGoalView> {
     'Bacak': false,
     'Omuz': false,
     'Sırt': false,
+    'Kol': false,
     'Tüm vücut': false,
   };
 
@@ -86,7 +87,7 @@ class _BodyRegionGoalViewState extends State<BodyRegionGoalView> {
             const SnackBar(content: Text('Bölge ve hedef bilgileri kaydedildi')),
           );
           
-          Navigator.pushReplacementNamed(context, '/exercise-recommendations');
+          Navigator.pushReplacementNamed(context, '/onboarding-plan');
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(

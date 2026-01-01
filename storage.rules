@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+// Egzersiz görselleri ve videoları için kurallar
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Egzersiz görselleri: Herkes okuyabilir, sadece admin yazabilir
+    match /exercises/images/{exerciseId}/{fileName} {
+      // Okuma: Herkes okuyabilir
+      allow read: if true;
+      
+      // Yazma: Sadece admin
+      allow write: if request.auth != null && 
+                     exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/user_roles/$(request.auth.uid))
+                       .data.roles.hasAny(['admin']);
+      
+      // Dosya boyutu kontrolü: Max 10MB
+      allow create: if request.resource.size < 10 * 1024 * 1024 &&
+                      request.resource.contentType.matches('image/.*');
+      
+      allow update: if request.resource.size < 10 * 1024 * 1024 &&
+                      request.resource.contentType.matches('image/.*');
+    }
+    
+    // Egzersiz videoları: Herkes okuyabilir, sadece admin yazabilir
+    match /exercises/videos/{exerciseId}/{fileName} {
+      // Okuma: Herkes okuyabilir
+      allow read: if true;
+      
+      // Yazma: Sadece admin
+      allow write: if request.auth != null && 
+                     exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/user_roles/$(request.auth.uid))
+                       .data.roles.hasAny(['admin']);
+      
+      // Dosya boyutu kontrolü: Max 50MB
+      allow create: if request.resource.size < 50 * 1024 * 1024 &&
+                      request.resource.contentType.matches('video/.*');
+      
+      allow update: if request.resource.size < 50 * 1024 * 1024 &&
+                      request.resource.contentType.matches('video/.*');
+    }
+    
+    // Kullanıcı profil fotoğrafları
+    match /users/{userId}/profile/{fileName} {
+      // Okuma: Herkes okuyabilir
+      allow read: if true;
+      
+      // Yazma: Sadece kendi profil fotoğrafını yükleyebilir
+      allow write: if request.auth != null && request.auth.uid == userId &&
+                      request.resource.size < 5 * 1024 * 1024 &&
+                      request.resource.contentType.matches('image/.*');
+    }
+    
+    // Diğer tüm dosyalar: Reddet
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

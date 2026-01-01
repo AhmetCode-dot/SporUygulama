@@ -4,6 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/workout_service.dart';
 import '../models/workout_session.dart';
 import '../models/exercise_detail.dart';
+import '../services/user_preferences_service.dart';
+import '../services/program_template_service.dart';
+import '../services/program_day_completion_service.dart';
+import '../services/user_program_state_service.dart';
+import '../models/program_template.dart';
+import '../services/gamification_service.dart';
+import '../models/user_level.dart';
 
 class ProgressView extends StatefulWidget {
   const ProgressView({Key? key}) : super(key: key);
@@ -14,6 +21,11 @@ class ProgressView extends StatefulWidget {
 
 class _ProgressViewState extends State<ProgressView> {
   final WorkoutService _workoutService = WorkoutService();
+  final UserPreferencesService _preferencesService = UserPreferencesService();
+  final ProgramTemplateService _templateService = ProgramTemplateService();
+  final ProgramDayCompletionService _completionService = ProgramDayCompletionService();
+  final UserProgramStateService _programStateService = UserProgramStateService();
+  final GamificationService _gamificationService = GamificationService();
   bool _isLoading = true;
   
   int _totalWorkouts = 0;
@@ -25,6 +37,13 @@ class _ProgressViewState extends State<ProgressView> {
   List<bool> _last7DaysStatus = [];
   List<WorkoutSession> _recentWorkouts = [];
   int _weeklyGoal = 3; // Varsayılan haftalık hedef
+  
+  // Program ilerlemesi
+  ProgramTemplate? _activeProgram;
+  Set<String> _completedProgramDays = {};
+  
+  // Gamification
+  UserLevel? _userLevel;
 
   @override
   void initState() {
@@ -53,6 +72,12 @@ class _ProgressViewState extends State<ProgressView> {
       final last7DaysStatus = await _workoutService.getLast7DaysStatus(user.uid);
       final recentWorkouts = await _workoutService.getRecentWorkouts(user.uid, 30);
 
+      // Program ilerlemesini yükle
+      await _loadProgramProgress(user.uid);
+
+      // Seviye bilgisini yükle
+      final level = await _gamificationService.getUserLevel(user.uid);
+
       setState(() {
         _totalWorkouts = totalWorkouts;
         _streak = streak;
@@ -62,27 +87,82 @@ class _ProgressViewState extends State<ProgressView> {
         _hasWorkoutToday = hasWorkoutToday;
         _last7DaysStatus = last7DaysStatus;
         _recentWorkouts = recentWorkouts;
+        _userLevel = level;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('İlerleme yüklenirken hata: ${e.toString()}')),
+          SnackBar(
+            content: Text('İlerleme yüklenirken hata: ${e.toString()}'),
+            action: SnackBarAction(
+              label: 'Tekrar Dene',
+              textColor: Colors.white,
+              onPressed: _loadProgress,
+            ),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
+  Future<void> _loadProgramProgress(String userId) async {
+    try {
+      final programState = await _programStateService.getActiveProgram(userId);
+      if (programState == null) return;
+
+      final template = await _templateService.getAllTemplates();
+      final activeTemplate = template.firstWhere(
+        (t) => t.id == programState.programId,
+        orElse: () => template.isNotEmpty ? template.first : throw Exception('Template bulunamadı'),
+      );
+
+      final completions = await _completionService.getCompletionsForProgram(
+        userId: userId,
+        programId: programState.programId,
+      );
+
+      setState(() {
+        _activeProgram = activeTemplate;
+        _completedProgramDays = completions
+            .map((c) => '${c.weekIndex}_${c.dayIndex}')
+            .toSet();
+      });
+    } catch (e) {
+      // Program yoksa veya hata varsa sessizce devam et
+    }
+  }
+
+  double _calculateProgramProgress() {
+    if (_activeProgram == null || _activeProgram!.days.isEmpty) return 0.0;
+    final totalDays = _activeProgram!.days.length;
+    final completedDays = _completedProgramDays.length;
+    return (completedDays / totalDays).clamp(0.0, 1.0);
+  }
+
   Future<void> _loadWeeklyGoal(String userId) async {
     try {
+      // Önce user_preferences koleksiyonundan haftalık hedefi oku
+      final prefs = await _preferencesService.getPreferences(userId);
+      if (prefs != null && prefs.weeklyWorkoutTarget > 0) {
+        setState(() {
+          _weeklyGoal = prefs.weeklyWorkoutTarget;
+        });
+        return;
+      }
+
+      // Geriye dönük uyumluluk: users koleksiyonundaki weeklyGoal alanını oku
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .get();
-      if (doc.exists && doc.data()?['weeklyGoal'] != null) {
+      final data = doc.data();
+      if (doc.exists && data != null && data['weeklyGoal'] != null) {
         setState(() {
-          _weeklyGoal = doc.data()!['weeklyGoal'] as int;
+          _weeklyGoal = data['weeklyGoal'] as int;
         });
       }
     } catch (e) {
@@ -95,10 +175,17 @@ class _ProgressViewState extends State<ProgressView> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // Eski alan: users.weeklyGoal (geri uyumluluk için)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set({'weeklyGoal': goal}, SetOptions(merge: true));
+
+      // Yeni plan: user_preferences.weeklyWorkoutTarget
+      await FirebaseFirestore.instance
+          .collection('user_preferences')
+          .doc(user.uid)
+          .set({'weeklyWorkoutTarget': goal}, SetOptions(merge: true));
 
       setState(() {
         _weeklyGoal = goal;
@@ -158,6 +245,13 @@ class _ProgressViewState extends State<ProgressView> {
         title: const Text('İlerleme Takibi'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.pushNamed(context, '/notification-settings');
+            },
+            tooltip: 'Bildirim Ayarları',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadProgress,
           ),
@@ -165,14 +259,29 @@ class _ProgressViewState extends State<ProgressView> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+          : RefreshIndicator(
+              onRefresh: _loadProgress,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   // 1. BUGÜNÜN DURUMU (Büyük Kart)
                   _buildTodayStatusCard(),
                   const SizedBox(height: 16),
+
+                  // Seviye Kartı
+                  if (_userLevel != null) ...[
+                    _buildLevelCard(_userLevel!),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Program İlerlemesi (varsa)
+                  if (_activeProgram != null) ...[
+                    _buildProgramProgressCard(),
+                    const SizedBox(height: 16),
+                  ],
 
                   // 2. HAFTALIK ÖZET (7 Gün)
                   _buildWeeklySummary(),
@@ -196,7 +305,8 @@ class _ProgressViewState extends State<ProgressView> {
                   ),
                   const SizedBox(height: 12),
                   _buildRecentWorkoutsList(),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -275,6 +385,7 @@ class _ProgressViewState extends State<ProgressView> {
   Widget _buildWeeklySummary() {
     final weekProgress = _last7DaysStatus.where((status) => status).length;
     final progressPercent = _weeklyGoal > 0 ? (weekProgress / _weeklyGoal).clamp(0.0, 1.0) : 0.0;
+    final remaining = _weeklyGoal > 0 ? (_weeklyGoal - weekProgress).clamp(0, _weeklyGoal) : 0;
 
     return Card(
       child: Padding(
@@ -368,7 +479,7 @@ class _ProgressViewState extends State<ProgressView> {
             Text(
               progressPercent >= 1.0
                   ? '🎉 Haftalık hedefinize ulaştınız!'
-                  : 'Hedefe ${_weeklyGoal - weekProgress} gün kaldı',
+                  : 'Hedefe $remaining gün kaldı',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -635,6 +746,181 @@ class _ProgressViewState extends State<ProgressView> {
     );
   }
 
+  Widget _buildProgramProgressCard() {
+    if (_activeProgram == null) return const SizedBox.shrink();
+
+    final progress = _calculateProgramProgress();
+    final totalDays = _activeProgram!.days.length;
+    final completedDays = _completedProgramDays.length;
+    final remainingDays = totalDays - completedDays;
+
+    return Card(
+      elevation: 3,
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.fitness_center, color: Colors.blue.shade700, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _activeProgram!.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                      Text(
+                        'Program İlerlemesi',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: Colors.grey.shade300,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildProgramStatItem(
+                  icon: Icons.check_circle,
+                  label: 'Tamamlanan',
+                  value: '$completedDays',
+                  color: Colors.green,
+                ),
+                _buildProgramStatItem(
+                  icon: Icons.radio_button_unchecked,
+                  label: 'Kalan',
+                  value: '$remainingDays',
+                  color: Colors.orange,
+                ),
+                _buildProgramStatItem(
+                  icon: Icons.calendar_today,
+                  label: 'Toplam',
+                  value: '$totalDays',
+                  color: Colors.blue,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLevelCard(UserLevel level) {
+    return Card(
+      elevation: 3,
+      color: Colors.amber.shade50,
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/achievements'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.star, color: Colors.amber.shade700, size: 40),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Seviye ${level.level}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${level.totalXP} XP',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: level.progressPercentage,
+                      minHeight: 6,
+                      backgroundColor: Colors.grey.shade300,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.amber.shade700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${level.currentLevelXP} / ${level.xpForNextLevel} XP',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: Colors.grey.shade400),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgramStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required MaterialColor color,
+  }) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color.shade700,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
 
   void _showWeeklyGoalDialog() {
     showDialog(

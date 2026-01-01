@@ -6,7 +6,10 @@ import '../services/exercise_recommendation_service.dart';
 import '../services/workout_service.dart';
 import '../models/workout_session.dart';
 import '../models/exercise_detail.dart';
-import 'package:video_player/video_player.dart';
+import '../services/gamification_service.dart';
+import '../models/badge.dart' as models;
+import '../widgets/exercise_media_widget.dart';
+import '../widgets/smart_image_widget.dart';
 
 class ExerciseRecommendationView extends StatefulWidget {
   const ExerciseRecommendationView({Key? key}) : super(key: key);
@@ -18,13 +21,31 @@ class ExerciseRecommendationView extends StatefulWidget {
 class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView> {
   final _exerciseService = ExerciseRecommendationService();
   final _workoutService = WorkoutService();
+  final _gamificationService = GamificationService();
   bool _isLoading = true;
   List<Exercise> _recommendedExercises = [];
   String _selectedGoal = '';
+  String _experienceLevel = '';
   List<String> _selectedBodyRegions = [];
   List<String> _selectedEquipment = [];
   String _selectedEnvironment = '';
+  int? _weeklyWorkoutTarget;
+  int? _sessionDurationMin;
+  List<String> _preferredBodyRegions = [];
   Set<String> _selectedExerciseIds = {}; // Seçili egzersizler
+
+  String? _experienceLevelLabel() {
+    switch (_experienceLevel) {
+      case 'beginner':
+        return 'Yeni başlıyorum';
+      case 'intermediate':
+        return 'Bir süredir yapıyorum';
+      case 'advanced':
+        return 'Uzun süredir düzenli yapıyorum';
+      default:
+        return null;
+    }
+  }
 
   @override
   void initState() {
@@ -36,18 +57,70 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          final data = doc.data()!;
-          setState(() {
-            _selectedGoal = data['goal'] ?? '';
-            _selectedBodyRegions = List<String>.from(data['bodyRegions'] ?? []);
-            _selectedEquipment = List<String>.from(data['equipment'] ?? []);
-            _selectedEnvironment = data['environment'] ?? '';
-          });
-          
-          await _loadRecommendedExercises();
+        final usersRef =
+            FirebaseFirestore.instance.collection('users').doc(user.uid);
+        final prefsRef = FirebaseFirestore.instance
+            .collection('user_preferences')
+            .doc(user.uid);
+
+        final results = await Future.wait([usersRef.get(), prefsRef.get()]);
+        final userDoc = results[0];
+        final prefsDoc = results[1];
+
+        String goal = '';
+        List<String> bodyRegions = [];
+        List<String> equipment = [];
+        String environment = '';
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          goal = (data['goal'] as String?) ?? '';
+          bodyRegions = List<String>.from((data['bodyRegions'] ?? []) as List);
+          equipment = List<String>.from((data['equipment'] ?? []) as List);
+          environment = (data['environment'] as String?) ?? '';
         }
+
+        String experienceLevel = '';
+        int? weeklyWorkoutTarget;
+        int? sessionDurationMin;
+        List<String> preferredBodyRegions = [];
+
+        if (prefsDoc.exists && prefsDoc.data() != null) {
+          final data = prefsDoc.data()!;
+          experienceLevel = (data['experienceLevel'] as String?) ?? '';
+          weeklyWorkoutTarget = data['weeklyWorkoutTarget'] as int?;
+          sessionDurationMin = data['sessionDurationMin'] as int?;
+
+          preferredBodyRegions =
+              List<String>.from((data['preferredBodyRegions'] ?? []) as List);
+
+          // Eğer user_preferences içinde daha güncel goal / environment / equipment varsa kullan
+          goal = (data['goal'] as String?) ?? goal;
+          environment =
+              (data['preferredEnvironment'] as String?) ?? environment;
+          if (data['availableEquipment'] is List) {
+            equipment =
+                List<String>.from((data['availableEquipment'] ?? []) as List);
+          }
+        }
+
+        // Eğer preferredBodyRegions boşsa, bodyRegions ile doldur (geri uyumluluk)
+        if (preferredBodyRegions.isEmpty && bodyRegions.isNotEmpty) {
+          preferredBodyRegions = List<String>.from(bodyRegions);
+        }
+
+        setState(() {
+          _selectedGoal = goal;
+          _selectedBodyRegions = bodyRegions;
+          _selectedEquipment = equipment;
+          _selectedEnvironment = environment;
+          _experienceLevel = experienceLevel;
+          _weeklyWorkoutTarget = weeklyWorkoutTarget;
+          _sessionDurationMin = sessionDurationMin;
+          _preferredBodyRegions = preferredBodyRegions;
+        });
+
+        await _loadRecommendedExercises();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,6 +137,11 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
         goal: _selectedGoal,
         equipment: _selectedEquipment,
         environment: _selectedEnvironment,
+        experienceLevel:
+            _experienceLevel.isEmpty ? null : _experienceLevel,
+        sessionDurationMin: _sessionDurationMin,
+        preferredBodyRegions:
+            _preferredBodyRegions.isEmpty ? null : _preferredBodyRegions,
       );
       
       setState(() {
@@ -72,9 +150,20 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
       });
     } catch (e) {
       setState(() => _isLoading = false);
+      if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Egzersizler yüklenirken hata oluştu: ${e.toString()}')),
+          SnackBar(
+            content: Text('Egzersizler yüklenirken hata oluştu: ${e.toString()}'),
+            action: SnackBarAction(
+              label: 'Tekrar Dene',
+              textColor: Colors.white,
+              onPressed: _loadRecommendedExercises,
+            ),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
       );
+      }
     }
   }
 
@@ -113,6 +202,12 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                         Text('Hedef: $_selectedGoal'),
                       if (_selectedBodyRegions.isNotEmpty)
                         Text('Bölgeler: ${_selectedBodyRegions.join(', ')}'),
+                      if (_experienceLevelLabel() != null)
+                        Text('Seviye: ${_experienceLevelLabel()}'),
+                      if (_weeklyWorkoutTarget != null)
+                        Text('Haftalık hedef: $_weeklyWorkoutTarget gün'),
+                      if (_sessionDurationMin != null)
+                        Text('Seans süresi: $_sessionDurationMin dk'),
                     ],
                   ),
                 ),
@@ -141,11 +236,27 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.schedule),
+                title: const Text('Hedef ve Plan'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/onboarding-plan');
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.trending_up),
                 title: const Text('İlerleme Takibi'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/progress');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.assignment),
+                title: const Text('Haftalık Planım'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/weekly-plan');
                 },
               ),
               const Divider(),
@@ -201,6 +312,30 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                               color: Colors.white70,
                             ),
                           ),
+                          if (_experienceLevelLabel() != null)
+                            Text(
+                              'Seviye: ${_experienceLevelLabel()}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          if (_weeklyWorkoutTarget != null)
+                            Text(
+                              'Haftalık hedef: $_weeklyWorkoutTarget gün',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          if (_sessionDurationMin != null)
+                            Text(
+                              'Seans süresi: $_sessionDurationMin dk',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -208,8 +343,17 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                     // Egzersiz listesi
                     Expanded(
                       child: _recommendedExercises.isEmpty
-                          ? const Center(
-                              child: Text(
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.fitness_center,
+                                    size: 64,
+                                    color: Colors.white.withOpacity(0.7),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
                                 'Seçtiğiniz kriterlere uygun egzersiz bulunamadı.',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -217,14 +361,29 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                                 ),
                                 textAlign: TextAlign.center,
                               ),
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pushNamed(context, '/body-region-goal');
+                                    },
+                                    child: const Text(
+                                      'Bölge ve Hedef Seçimini Güncelle',
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             )
-                          : ListView.builder(
+                          : RefreshIndicator(
+                              onRefresh: _loadRecommendedExercises,
+                              child: ListView.builder(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               itemCount: _recommendedExercises.length,
                               itemBuilder: (context, index) {
                                 final exercise = _recommendedExercises[index];
                                 return _buildExerciseCard(exercise);
                               },
+                              ),
                             ),
                     ),
                     
@@ -323,19 +482,11 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              exercise.imageUrl,
+            child: SmartImageWidget(
+              imageUrl: exercise.imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey.shade300,
-                  child: const Icon(
-                    Icons.fitness_center,
-                    color: Colors.grey,
-                    size: 30,
-                  ),
-                );
-              },
+              width: 60,
+              height: 60,
             ),
           ),
         ),
@@ -385,34 +536,14 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                         return SizedBox(
                           width: side,
                           height: side,
-                          child: exercise.instructionVideoAsset != null
-                              ? InstructionVideoWidget(assetPath: exercise.instructionVideoAsset!)
-                              : (exercise.instructionGifUrl != null
-                                  ? Image.network(
-                                      exercise.instructionGifUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Container(
-                                        color: Colors.grey.shade300,
-                                        child: const Icon(Icons.fitness_center, size: 40, color: Colors.grey),
-                                      ),
-                                    )
-                                  : (exercise.imageUrl.startsWith('http')
-                                      ? Image.network(
-                                          exercise.imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Container(
-                                            color: Colors.grey.shade300,
-                                            child: const Icon(Icons.fitness_center, size: 40, color: Colors.grey),
-                                          ),
-                                        )
-                                      : Image.asset(
-                                          exercise.imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Container(
-                                            color: Colors.grey.shade300,
-                                            child: const Icon(Icons.fitness_center, size: 40, color: Colors.grey),
-                                          ),
-                                        ))),
+                          child: ExerciseMediaWidget(
+                            exercise: exercise,
+                            width: side,
+                            height: side,
+                            fit: BoxFit.cover,
+                            autoPlayVideo: true,
+                            loopingVideo: true,
+                          ),
                         );
                       },
                     ),
@@ -562,6 +693,21 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
 
       await _workoutService.saveWorkoutSession(session);
 
+      // Gamification: XP ve rozet kontrolü
+      List<models.AchievementBadge> newBadges = [];
+      try {
+        await _gamificationService.onWorkoutCompleted(
+          user.uid,
+          totalDuration,
+        );
+        
+        // Yeni kazanılan rozetleri kontrol et
+        newBadges = await _gamificationService.checkAndAwardBadges(user.uid);
+      } catch (e) {
+        // Gamification hataları sessizce geç
+        debugPrint('Gamification error: $e');
+      }
+
       // Seçimleri temizle
       setState(() {
         _selectedExerciseIds.clear();
@@ -569,21 +715,27 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Tebrikler! ${selectedExercises.length} egzersiz tamamlandı.',
+        // Rozet kazanıldıysa önce onu göster
+        if (newBadges.isNotEmpty) {
+          _showBadgeEarnedDialog(newBadges);
+        } else {
+          // Normal başarı mesajı
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Tebrikler! ${selectedExercises.length} egzersiz tamamlandı.',
+              ),
+              backgroundColor: Colors.green,
+              action: SnackBarAction(
+                label: 'İlerleme',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.pushNamed(context, '/progress');
+                },
+              ),
             ),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'İlerleme',
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.pushNamed(context, '/progress');
-              },
-            ),
-          ),
-        );
+          );
+        }
       }
     } catch (e, stackTrace) {
       setState(() => _isLoading = false);
@@ -828,39 +980,73 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
       ),
     );
   }
-}
 
-class InstructionVideoWidget extends StatefulWidget {
-  final String assetPath;
-  const InstructionVideoWidget({required this.assetPath, Key? key}) : super(key: key);
-  @override
-  State<InstructionVideoWidget> createState() => _InstructionVideoWidgetState();
-}
-
-class _InstructionVideoWidgetState extends State<InstructionVideoWidget> {
-  late VideoPlayerController _controller;
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.asset(widget.assetPath)..setLooping(true)..initialize().then((_) {
-      setState(() {});
-      _controller.play(); // Otomatik başlat
-    });
-  }
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-  @override
-  Widget build(BuildContext context) {
-    if (!_controller.value.isInitialized) {
-      return const SizedBox(width: 90, height: 90, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
-    }
-    return SizedBox(
-      width: 90,
-      height: 90,
-      child: VideoPlayer(_controller),
+  void _showBadgeEarnedDialog(List<models.AchievementBadge> badges) {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Text(badges.first.icon, style: const TextStyle(fontSize: 32)),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Rozet Kazandın!',
+                style: TextStyle(fontSize: 20),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: badges.map((badge) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                children: [
+                  Text(
+                    badge.icon,
+                    style: const TextStyle(fontSize: 48),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    badge.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    badge.description,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/achievements');
+            },
+            child: const Text('Rozetlerimi Gör'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
     );
   }
 }
+

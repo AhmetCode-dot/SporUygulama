@@ -1,27 +1,98 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Kullanıcılar koleksiyonu - kullanıcılar kendi verilerini yazabilir/okuyabilir
+    // Helper function: Kullanıcının admin olup olmadığını kontrol et
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/user_roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
+    
+    // Users koleksiyonu - kullanıcılar kendi verilerini yazabilir/okuyabilir, admin tümünü görebilir
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
-    // User profiles koleksiyonu - kullanıcılar kendi profillerini yazabilir/okuyabilir
+    // User profiles koleksiyonu - kullanıcılar kendi profillerini yazabilir/okuyabilir, admin tümünü görebilir
     match /user_profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
-    // Workout sessions koleksiyonu - kullanıcılar sadece kendi antrenmanlarını yazabilir/okuyabilir
+    // Workout sessions koleksiyonu - kullanıcılar sadece kendi antrenmanlarını yazabilir/okuyabilir, admin tümünü görebilir
     match /workout_sessions/{sessionId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
     }
     
-    // Exercises koleksiyonu - herkes okuyabilir, sadece admin yazabilir (isteğe bağlı)
+    // Exercises koleksiyonu - herkes okuyabilir, sadece admin yazabilir
     match /exercises/{exerciseId} {
       allow read: if request.auth != null;
-      allow write: if false; // Sadece admin panelinden eklenebilir
+      allow write: if isAdmin();
+    }
+
+    // Program templates koleksiyonu - herkes okuyabilir, sadece admin yazabilir
+    match /program_templates/{programId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // User preferences koleksiyonu - kullanıcılar kendi tercihlerini okuyup yazabilir, admin tümünü görebilir
+    match /user_preferences/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Program day completions koleksiyonu - kullanıcılar kendi tamamlanan günlerini okuyup yazabilir, admin tümünü görebilir
+    match /program_day_completions/{completionId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // User program states koleksiyonu - kullanıcılar kendi program durumlarını okuyup yazabilir, admin tümünü görebilir
+    match /user_program_states/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    // User achievements koleksiyonu - kullanıcılar kendi rozetlerini okuyabilir, sistem yazabilir
+    match /user_achievements/{achievementId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // User levels koleksiyonu - kullanıcılar kendi seviyelerini okuyup yazabilir, admin tümünü görebilir
+    match /user_levels/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Notification preferences koleksiyonu - kullanıcılar kendi bildirim tercihlerini okuyup yazabilir, admin tümünü görebilir
+    match /notification_preferences/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    // User roles koleksiyonu - kullanıcılar kendi rollerini okuyabilir, sadece admin yazabilir
+    match /user_roles/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
     }
   }
 }
