@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/exercise.dart';
 
 class ExerciseRecommendationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   final String _collection = 'exercises';
 
   // Kullanıcının tercihlerine göre egzersiz önerilerini getir
@@ -19,9 +21,40 @@ class ExerciseRecommendationService {
       // Firestore'dan egzersizleri getir
       final QuerySnapshot snapshot = await _firestore.collection(_collection).get();
       
-      List<Exercise> allExercises = snapshot.docs
-          .map((doc) => Exercise.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
+      List<Exercise> allExercises = [];
+      
+      // Her bir dokümanı işle ve gs:// URL'leri dönüştür
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // imageUrl'i kontrol et ve gerekirse dönüştür
+        String imageUrl = data['imageUrl'] ?? '';
+        if (imageUrl.startsWith('gs://')) {
+          try {
+            final ref = _storage.refFromURL(imageUrl);
+            imageUrl = await ref.getDownloadURL();
+            // Map'i güncelle
+            data['imageUrl'] = imageUrl;
+          } catch (e) {
+            print('[ExerciseRecommendationService] gs:// imageUrl dönüştürülemedi: $e');
+            // Hata durumunda boş bırak, widget placeholder gösterecek
+            data['imageUrl'] = '';
+          }
+        }
+        
+        // instructionVideoAsset'i kontrol et ve gerekirse dönüştür
+        String? videoUrl = data['instructionVideoAsset'] as String?;
+        if (videoUrl != null && videoUrl.startsWith('gs://')) {
+          try {
+            final ref = _storage.refFromURL(videoUrl);
+            data['instructionVideoAsset'] = await ref.getDownloadURL();
+          } catch (e) {
+            print('[ExerciseRecommendationService] gs:// videoUrl dönüştürülemedi: $e');
+          }
+        }
+        
+        allExercises.add(Exercise.fromMap(data));
+      }
 
       // Eğer Firestore'da egzersiz yoksa, varsayılan egzersizleri kullan
       if (allExercises.isEmpty) {

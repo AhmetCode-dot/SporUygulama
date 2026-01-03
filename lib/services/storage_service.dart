@@ -27,15 +27,25 @@ class StorageService {
           if (data['imageUrl'] != null && 
               data['imageUrl'].toString().isNotEmpty) {
             final url = data['imageUrl'] as String;
-            // HTTP URL veya Firebase Storage URL ise direkt kullan
-            if (url.startsWith('http') || url.startsWith('gs://')) {
+            // HTTP URL ise direkt kullan
+            if (url.startsWith('http')) {
               return url;
+            }
+            // gs:// URL ise download URL'e çevir
+            if (url.startsWith('gs://')) {
+              try {
+                final ref = _storage.refFromURL(url);
+                return await ref.getDownloadURL();
+              } catch (e) {
+                print('[StorageService] gs:// URL çevrilemedi: $e');
+              }
             }
           }
         }
       }
     } catch (e) {
       // Hata durumunda fallback kullan
+      print('[StorageService] getExerciseImageUrl hata: $e');
     }
     
     // Firestore'da yoksa veya hata varsa asset path'i kullan
@@ -58,15 +68,33 @@ class StorageService {
           if (data['videoUrl'] != null && 
               data['videoUrl'].toString().isNotEmpty) {
             final url = data['videoUrl'] as String;
-            if (url.startsWith('http') || url.startsWith('gs://')) {
+            if (url.startsWith('http')) {
               return url;
+            }
+            // gs:// URL ise download URL'e çevir
+            if (url.startsWith('gs://')) {
+              try {
+                final ref = _storage.refFromURL(url);
+                return await ref.getDownloadURL();
+              } catch (e) {
+                print('[StorageService] gs:// video URL çevrilemedi: $e');
+              }
             }
           }
           // instructionVideoAsset varsa onu kullan
           if (data['instructionVideoAsset'] != null) {
             final url = data['instructionVideoAsset'] as String;
-            if (url.startsWith('http') || url.startsWith('gs://')) {
+            if (url.startsWith('http')) {
               return url;
+            }
+            // gs:// URL ise download URL'e çevir
+            if (url.startsWith('gs://')) {
+              try {
+                final ref = _storage.refFromURL(url);
+                return await ref.getDownloadURL();
+              } catch (e) {
+                print('[StorageService] gs:// instructionVideoAsset çevrilemedi: $e');
+              }
             }
             // Asset path ise olduğu gibi döndür
             return url;
@@ -75,6 +103,7 @@ class StorageService {
       }
     } catch (e) {
       // Hata durumunda fallback kullan
+      print('[StorageService] getExerciseVideoUrl hata: $e');
     }
     
     // Firestore'da yoksa asset path'i kullan
