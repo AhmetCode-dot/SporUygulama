@@ -145,7 +145,7 @@ class _OnboardingPlanViewState extends State<OnboardingPlanView> {
 
       Navigator.pushReplacementNamed(
         context,
-        '/exercise-recommendations',
+        '/home',
       );
     } catch (e) {
       if (!mounted) return;

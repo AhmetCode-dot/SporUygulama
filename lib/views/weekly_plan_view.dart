@@ -13,7 +13,12 @@ import '../services/gamification_service.dart';
 import '../models/badge.dart' as models;
 
 class WeeklyPlanView extends StatefulWidget {
-  const WeeklyPlanView({Key? key}) : super(key: key);
+  final bool hideAppBar;
+  
+  const WeeklyPlanView({
+    Key? key,
+    this.hideAppBar = false,
+  }) : super(key: key);
 
   @override
   State<WeeklyPlanView> createState() => _WeeklyPlanViewState();
@@ -259,7 +264,7 @@ class _WeeklyPlanViewState extends State<WeeklyPlanView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.hideAppBar ? null : AppBar(
         title: const Text('Haftalık Planım'),
         actions: [
           IconButton(

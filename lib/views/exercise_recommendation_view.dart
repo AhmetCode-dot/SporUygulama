@@ -10,9 +10,15 @@ import '../services/gamification_service.dart';
 import '../models/badge.dart' as models;
 import '../widgets/exercise_media_widget.dart';
 import '../widgets/smart_image_widget.dart';
+import 'active_workout_view.dart';
 
 class ExerciseRecommendationView extends StatefulWidget {
-  const ExerciseRecommendationView({Key? key}) : super(key: key);
+  final bool hideAppBar;
+  
+  const ExerciseRecommendationView({
+    Key? key,
+    this.hideAppBar = false,
+  }) : super(key: key);
 
   @override
   _ExerciseRecommendationViewState createState() => _ExerciseRecommendationViewState();
@@ -170,108 +176,15 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.hideAppBar ? null : AppBar(
         title: const Text('Kişisel Egzersiz Önerileri'),
-      ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              UserAccountsDrawerHeader(
-                currentAccountPicture: const CircleAvatar(
-                  child: Icon(Icons.person),
-                ),
-                accountName: Text(
-                  (FirebaseAuth.instance.currentUser?.email ?? '').split('@').first,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                accountEmail: Text(FirebaseAuth.instance.currentUser?.email ?? ''),
-                otherAccountsPictures: [
-                  if (_selectedGoal.isNotEmpty)
-                    const Icon(Icons.flag, color: Colors.white),
-                ],
-              ),
-              if (_selectedGoal.isNotEmpty || _selectedBodyRegions.isNotEmpty)
-                ListTile(
-                  title: const Text('Özet'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_selectedGoal.isNotEmpty)
-                        Text('Hedef: $_selectedGoal'),
-                      if (_selectedBodyRegions.isNotEmpty)
-                        Text('Bölgeler: ${_selectedBodyRegions.join(', ')}'),
-                      if (_experienceLevelLabel() != null)
-                        Text('Seviye: ${_experienceLevelLabel()}'),
-                      if (_weeklyWorkoutTarget != null)
-                        Text('Haftalık hedef: $_weeklyWorkoutTarget gün'),
-                      if (_sessionDurationMin != null)
-                        Text('Seans süresi: $_sessionDurationMin dk'),
-                    ],
-                  ),
-                ),
-              ListTile(
-                leading: const Icon(Icons.person),
-                title: const Text('Profil'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/profile');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.fitness_center),
-                title: const Text('Ekipman / Ortam'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/equipment');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag),
-                title: const Text('Bölge / Hedef'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/body-region-goal');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.schedule),
-                title: const Text('Hedef ve Plan'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/onboarding-plan');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.trending_up),
-                title: const Text('İlerleme Takibi'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/progress');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.assignment),
-                title: const Text('Haftalık Planım'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/weekly-plan');
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: const Text('Çıkış'),
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
-                  if (!mounted) return;
-                  Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
-                },
-              ),
-            ],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadRecommendedExercises,
+            tooltip: 'Yenile',
           ),
-        ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -293,49 +206,127 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                 )
               : Column(
                   children: [
-                    // Özet
+                    // Özet Kartı - Modern Tasarım
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.15),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Hedefiniz: $_selectedGoal',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
+                          // Hedef başlığı
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.flag,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Hedefiniz',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white60,
+                                      ),
+                                    ),
+                                    Text(
+                                      _selectedGoal.isNotEmpty ? _selectedGoal : 'Belirtilmedi',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'Bölgeler: ${_selectedBodyRegions.join(', ')}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white70,
-                            ),
+                          const SizedBox(height: 16),
+                          
+                          // İstatistik chip'leri
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (_experienceLevelLabel() != null)
+                                _buildSummaryChip(
+                                  icon: Icons.trending_up,
+                                  label: _experienceLevelLabel()!,
+                                  color: Colors.orange,
+                                ),
+                              if (_weeklyWorkoutTarget != null)
+                                _buildSummaryChip(
+                                  icon: Icons.calendar_today,
+                                  label: 'Haftalık $_weeklyWorkoutTarget gün',
+                                  color: Colors.green,
+                                ),
+                              if (_sessionDurationMin != null)
+                                _buildSummaryChip(
+                                  icon: Icons.timer,
+                                  label: '$_sessionDurationMin dk',
+                                  color: Colors.purple,
+                                ),
+                            ],
                           ),
-                          if (_experienceLevelLabel() != null)
-                            Text(
-                              'Seviye: ${_experienceLevelLabel()}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
+                          
+                          // Bölgeler
+                          if (_selectedBodyRegions.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: _selectedBodyRegions.map((region) => 
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.5),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    region,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ).toList(),
                             ),
-                          if (_weeklyWorkoutTarget != null)
-                            Text(
-                              'Haftalık hedef: $_weeklyWorkoutTarget gün',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          if (_sessionDurationMin != null)
-                            Text(
-                              'Seans süresi: $_sessionDurationMin dk',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -392,10 +383,11 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
-                          ElevatedButton(
+                          ElevatedButton.icon(
                             onPressed: _selectedExerciseIds.isEmpty
                                 ? null
-                                : _completeWorkout,
+                                : _startWorkout,
+                            icon: const Icon(Icons.play_arrow),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,
@@ -406,10 +398,10 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
                               minimumSize: const Size(double.infinity, 55),
                               elevation: 5,
                             ),
-                            child: Text(
+                            label: Text(
                               _selectedExerciseIds.isEmpty
                                   ? 'Egzersiz Seçin'
-                                  : '${_selectedExerciseIds.length} Egzersizi Tamamla',
+                                  : '${_selectedExerciseIds.length} Egzersiz ile Başla',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -447,187 +439,413 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
   }
 
   Widget _buildExerciseCard(Exercise exercise) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
+    final isSelected = _selectedExerciseIds.contains(exercise.id);
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(15),
+        gradient: LinearGradient(
+          colors: isSelected
+              ? [Colors.blue.shade50, Colors.blue.shade100]
+              : [Colors.white, Colors.grey.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isSelected ? Colors.blue.shade400 : Colors.grey.shade200,
+          width: isSelected ? 2 : 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: isSelected 
+                ? Colors.blue.withOpacity(0.2)
+                : Colors.black.withOpacity(0.08),
+            blurRadius: 15,
             offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: ExpansionTile(
-        leading: Checkbox(
-          value: _selectedExerciseIds.contains(exercise.id),
-          onChanged: (bool? value) {
-            setState(() {
-              if (value == true) {
-                _selectedExerciseIds.add(exercise.id);
-              } else {
-                _selectedExerciseIds.remove(exercise.id);
-              }
-            });
-          },
-        ),
-        trailing: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.grey.shade200,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SmartImageWidget(
-              imageUrl: exercise.imageUrl,
-              fit: BoxFit.cover,
-              width: 60,
-              height: 60,
-            ),
-          ),
-        ),
-        title: Text(
-          exercise.name,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              exercise.description,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: EdgeInsets.zero,
+          leading: GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isSelected) {
+                  _selectedExerciseIds.remove(exercise.id);
+                } else {
+                  _selectedExerciseIds.add(exercise.id);
+                }
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blue : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected ? Colors.blue : Colors.grey.shade400,
+                  width: 2,
+                ),
               ),
+              child: isSelected
+                  ? const Icon(Icons.check, color: Colors.white, size: 20)
+                  : null,
             ),
-            const SizedBox(height: 5),
-            Row(
-              children: [
-                _buildInfoChip('${exercise.duration} dk', Colors.blue),
-                const SizedBox(width: 8),
-                _buildInfoChip(exercise.getDifficultyText(), Colors.orange),
-                const SizedBox(width: 8),
-                _buildInfoChip('${exercise.bodyRegions.length} bölge', Colors.green),
-              ],
-            ),
-          ],
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Talimatlar
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final double side = (MediaQuery.of(context).size.width * 0.28).clamp(90, 220);
-                        return SizedBox(
-                          width: side,
-                          height: side,
-                          child: ExerciseMediaWidget(
-                            exercise: exercise,
-                            width: side,
-                            height: side,
-                            fit: BoxFit.cover,
-                            autoPlayVideo: true,
-                            loopingVideo: true,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          double screenWidth = MediaQuery.of(context).size.width;
-                          double fontSizeTitle = (screenWidth * 0.042).clamp(14, 18);
-                          double fontSizeBody = (screenWidth * 0.038).clamp(12, 16);
-                          double lineHeight = screenWidth > 500 ? 1.7 : 1.5;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Nasıl Yapılır:',
-                                style: TextStyle(
-                                  fontSize: fontSizeTitle,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                exercise.instructions,
-                                style: TextStyle(
-                                  fontSize: fontSizeBody,
-                                  color: Colors.black87,
-                                  height: lineHeight,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+          ),
+          title: Row(
+            children: [
+              // Egzersiz Resmi
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: 16),
-                
-                // Faydalar
-                const Text(
-                  'Faydaları:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SmartImageWidget(
+                    imageUrl: exercise.imageUrl,
+                    fit: BoxFit.cover,
+                    width: 70,
+                    height: 70,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: exercise.benefits.map((benefit) => 
-                    _buildInfoChip(benefit, Colors.purple)
-                  ).toList(),
+              ),
+              const SizedBox(width: 14),
+              // Egzersiz Bilgileri
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.blue.shade800 : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      exercise.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Info Badges
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _buildMiniChip(
+                          icon: Icons.timer_outlined,
+                          label: '${exercise.duration} dk',
+                          color: Colors.blue,
+                        ),
+                        _buildMiniChip(
+                          icon: Icons.speed,
+                          label: exercise.getDifficultyText(),
+                          color: _getDifficultyColor(exercise.difficulty),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                
-                const SizedBox(height: 16),
-                
-                // Uyumlu bölgeler
-                const Text(
-                  'Çalıştırdığı Bölgeler:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+              ),
+            ],
+          ),
+          trailing: Icon(
+            Icons.keyboard_arrow_down,
+            color: Colors.grey.shade500,
+          ),
+          children: [
+            // Detay Bölümü
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Video/Resim ve Talimatlar
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Media Widget
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final double side = (MediaQuery.of(context).size.width * 0.28).clamp(100.0, 180.0);
+                              return SizedBox(
+                                width: side,
+                                height: side,
+                                child: ExerciseMediaWidget(
+                                  exercise: exercise,
+                                  width: side,
+                                  height: side,
+                                  fit: BoxFit.cover,
+                                  autoPlayVideo: true,
+                                  loopingVideo: true,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Talimatlar
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    color: Colors.blue.shade700,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Nasıl Yapılır',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              exercise.instructions,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: exercise.bodyRegions.map((region) => 
-                    _buildInfoChip(region, Colors.red)
-                  ).toList(),
-                ),
-              ],
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Faydalar
+                  _buildDetailSection(
+                    icon: Icons.favorite_outline,
+                    iconColor: Colors.purple,
+                    title: 'Faydaları',
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: exercise.benefits.map((benefit) => 
+                        _buildDetailChip(benefit, Colors.purple)
+                      ).toList(),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Çalıştırdığı Bölgeler
+                  _buildDetailSection(
+                    icon: Icons.accessibility_new,
+                    iconColor: Colors.red,
+                    title: 'Çalıştırdığı Bölgeler',
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: exercise.bodyRegions.map((region) => 
+                        _buildDetailChip(region, Colors.red)
+                      ).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildDetailSection({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required Widget child,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: iconColor, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildDetailChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.15),
+            color.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Color _getDifficultyColor(int difficulty) {
+    switch (difficulty) {
+      case 1:
+        return Colors.green;
+      case 2:
+        return Colors.orange;
+      case 3:
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Future<void> _startWorkout() async {
+    if (_selectedExerciseIds.isEmpty) return;
+
+    // Seçili egzersizleri al
+    final selectedExercises = _recommendedExercises
+        .where((e) => _selectedExerciseIds.contains(e.id))
+        .toList();
+
+    if (selectedExercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seçili egzersiz bulunamadı')),
+      );
+      return;
+    }
+
+    // ActiveWorkoutView'a yönlendir
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ActiveWorkoutView(exercises: selectedExercises),
+      ),
+    );
+
+    // Antrenman tamamlandıysa seçimleri temizle ve listeyi yenile
+    if (result == true && mounted) {
+      setState(() {
+        _selectedExerciseIds.clear();
+      });
+      _loadRecommendedExercises();
+    }
   }
 
   Future<void> _completeWorkout() async {
@@ -977,6 +1195,43 @@ class _ExerciseRecommendationViewState extends State<ExerciseRecommendationView>
           color: color,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(0.4),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

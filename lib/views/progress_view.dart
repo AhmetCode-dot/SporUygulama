@@ -11,9 +11,16 @@ import '../services/user_program_state_service.dart';
 import '../models/program_template.dart';
 import '../services/gamification_service.dart';
 import '../models/user_level.dart';
+import '../theme/app_theme.dart';
+import 'dart:math' as math;
 
 class ProgressView extends StatefulWidget {
-  const ProgressView({Key? key}) : super(key: key);
+  final bool hideAppBar;
+  
+  const ProgressView({
+    Key? key,
+    this.hideAppBar = false,
+  }) : super(key: key);
 
   @override
   State<ProgressView> createState() => _ProgressViewState();
@@ -241,7 +248,7 @@ class _ProgressViewState extends State<ProgressView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.hideAppBar ? null : AppBar(
         title: const Text('İlerleme Takibi'),
         actions: [
           IconButton(
@@ -296,12 +303,29 @@ class _ProgressViewState extends State<ProgressView> {
                   const SizedBox(height: 16),
 
                   // 5. SON ANTRENMANLAR
-                  const Text(
-                    'Son Antrenmanlar',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.indigo.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.history,
+                          color: Colors.indigo.shade700,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Son Antrenmanlar',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   _buildRecentWorkoutsList(),
@@ -313,26 +337,57 @@ class _ProgressViewState extends State<ProgressView> {
   }
 
   Widget _buildTodayStatusCard() {
-    return Card(
-      elevation: 4,
-      color: _hasWorkoutToday ? Colors.green.shade50 : Colors.orange.shade50,
+    final isDark = AppTheme.isDarkMode(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: _hasWorkoutToday
+              ? [Colors.green.shade400, Colors.green.shade600]
+              : [Colors.orange.shade400, Colors.orange.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: (_hasWorkoutToday ? Colors.green : Colors.orange).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Icon(
-              _hasWorkoutToday ? Icons.check_circle : Icons.radio_button_unchecked,
-              size: 64,
-              color: _hasWorkoutToday ? Colors.green : Colors.orange,
+            // Animasyonlu ikon container
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 3,
+                ),
+              ),
+              child: Icon(
+                _hasWorkoutToday ? Icons.check_circle : Icons.fitness_center,
+                size: 40,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               _hasWorkoutToday ? 'Bugün Antrenman Yaptınız!' : 'Bugün Antrenman Yapmadınız',
-              style: TextStyle(
-                fontSize: 20,
+              style: const TextStyle(
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: _hasWorkoutToday ? Colors.green.shade700 : Colors.orange.shade700,
+                color: Colors.white,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
@@ -341,36 +396,41 @@ class _ProgressViewState extends State<ProgressView> {
                   : 'Hadi bugün bir antrenman yapalım! 💪',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade700,
+                color: Colors.white.withOpacity(0.9),
               ),
             ),
             if (!_hasWorkoutToday) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/exercise-recommendations');
+                        Navigator.pushNamed(context, '/home');
                       },
-                      icon: const Icon(Icons.fitness_center),
-                      label: const Text('Antrenman Yap'),
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Antrenman Başlat'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.orange.shade700,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
+                  const SizedBox(width: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: IconButton(
                       onPressed: () => _addWorkoutForToday(),
-                      icon: const Icon(Icons.check),
-                      label: const Text('Yaptım'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.blue,
-                        side: const BorderSide(color: Colors.blue),
-                      ),
+                      icon: const Icon(Icons.add_task, color: Colors.white),
+                      tooltip: 'Manuel Kaydet',
                     ),
                   ),
                 ],
@@ -386,132 +446,354 @@ class _ProgressViewState extends State<ProgressView> {
     final weekProgress = _last7DaysStatus.where((status) => status).length;
     final progressPercent = _weeklyGoal > 0 ? (weekProgress / _weeklyGoal).clamp(0.0, 1.0) : 0.0;
     final remaining = _weeklyGoal > 0 ? (_weeklyGoal - weekProgress).clamp(0, _weeklyGoal) : 0;
+    final isDark = AppTheme.isDarkMode(context);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Bu Hafta',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Başlık
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.calendar_today,
+                      color: Colors.blue.shade700,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Bu Hafta',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: () => _showWeeklyGoalDialog(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag, size: 14, color: Colors.blue.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Hedef: $_weeklyGoal',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: () => _showWeeklyGoalDialog(),
-                  icon: const Icon(Icons.edit, size: 16),
-                  label: Text('Hedef: $_weeklyGoal gün'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Haftalık günler
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(7, (index) {
-                final daysAgo = 6 - index;
-                final hasWorkout = _last7DaysStatus[index];
-                final isToday = daysAgo == 0;
-                return Column(
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Circular progress + Günler
+          Row(
+            children: [
+              // Circular Progress Ring
+              SizedBox(
+                width: 100,
+                height: 100,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(
-                      _getDayName(daysAgo),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                        color: isToday ? Colors.blue : Colors.grey,
+                    SizedBox(
+                      width: 100,
+                      height: 100,
+                      child: CircularProgressIndicator(
+                        value: progressPercent,
+                        strokeWidth: 10,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          progressPercent >= 1.0 ? Colors.green : Colors.blue,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: hasWorkout ? Colors.green : Colors.grey.shade300,
-                        border: isToday
-                            ? Border.all(color: Colors.blue, width: 2)
-                            : null,
-                      ),
-                      child: Icon(
-                        hasWorkout ? Icons.check : Icons.close,
-                        color: hasWorkout ? Colors.white : Colors.grey.shade600,
-                        size: 20,
-                      ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$weekProgress',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '/$_weeklyGoal gün',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                );
-              }),
-            ),
-            const SizedBox(height: 16),
-            // İlerleme çubuğu
-            Row(
-              children: [
-                Expanded(
-                  child: LinearProgressIndicator(
-                    value: progressPercent,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      progressPercent >= 1.0 ? Colors.green : Colors.orange,
-                    ),
-                  ),
                 ),
-                const SizedBox(width: 12),
+              ),
+              const SizedBox(width: 20),
+              
+              // Haftalık günler
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: List.generate(7, (index) {
+                        final daysAgo = 6 - index;
+                        final hasWorkout = index < _last7DaysStatus.length ? _last7DaysStatus[index] : false;
+                        final isToday = daysAgo == 0;
+                        
+                        return Column(
+                          children: [
+                            Text(
+                              _getDayName(daysAgo),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                color: isToday ? Colors.blue : Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: hasWorkout
+                                    ? LinearGradient(
+                                        colors: [Colors.green.shade400, Colors.green.shade600],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                color: hasWorkout ? null : Colors.grey.shade200,
+                                border: isToday
+                                    ? Border.all(color: Colors.blue, width: 2)
+                                    : null,
+                                boxShadow: hasWorkout
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.green.withOpacity(0.3),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Icon(
+                                hasWorkout ? Icons.check : Icons.remove,
+                                color: hasWorkout ? Colors.white : Colors.grey.shade400,
+                                size: 16,
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Durum mesajı
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            decoration: BoxDecoration(
+              color: progressPercent >= 1.0
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  progressPercent >= 1.0 ? Icons.celebration : Icons.trending_up,
+                  size: 18,
+                  color: progressPercent >= 1.0 ? Colors.green : Colors.blue,
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  '$weekProgress/$_weeklyGoal',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  progressPercent >= 1.0
+                      ? 'Haftalık hedefinize ulaştınız! 🎉'
+                      : 'Hedefe $remaining gün kaldı',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: progressPercent >= 1.0 ? Colors.green.shade700 : Colors.blue.shade700,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              progressPercent >= 1.0
-                  ? '🎉 Haftalık hedefinize ulaştınız!'
-                  : 'Hedefe $remaining gün kaldı',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildStatsSection() {
-    return Row(
+    final isDark = AppTheme.isDarkMode(context);
+    final totalHours = _totalDuration ~/ 60;
+    final totalMinutes = _totalDuration % 60;
+    
+    return Column(
       children: [
-        Expanded(
-          child: _buildStatCard(
-            'Toplam Antrenman',
-            '$_totalWorkouts',
-            Icons.fitness_center,
-            Colors.blue,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildModernStatCard(
+                title: 'Toplam Antrenman',
+                value: '$_totalWorkouts',
+                icon: Icons.fitness_center,
+                gradient: [Colors.blue.shade400, Colors.blue.shade600],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildModernStatCard(
+                title: 'Seri',
+                value: '$_streak gün',
+                icon: Icons.local_fire_department,
+                gradient: [Colors.orange.shade400, Colors.orange.shade600],
+                isHighlighted: _streak >= 3,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            'Seri (Streak)',
-            '$_streak gün',
-            Icons.local_fire_department,
-            Colors.orange,
-          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildModernStatCard(
+                title: 'Bu Ay',
+                value: '$_thisMonthActiveDays gün',
+                icon: Icons.calendar_month,
+                gradient: [Colors.purple.shade400, Colors.purple.shade600],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildModernStatCard(
+                title: 'Toplam Süre',
+                value: totalHours > 0 ? '${totalHours}s ${totalMinutes}dk' : '$_totalDuration dk',
+                icon: Icons.timer,
+                gradient: [Colors.teal.shade400, Colors.teal.shade600],
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildModernStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required List<Color> gradient,
+    bool isHighlighted = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: gradient[0].withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              if (isHighlighted)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '🔥',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -520,43 +802,94 @@ class _ProgressViewState extends State<ProgressView> {
     final firstDayOfMonth = DateTime(now.year, now.month, 1);
     final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
     final daysInMonth = lastDayOfMonth.day;
-    final firstWeekday = firstDayOfMonth.weekday; // 1 = Monday, 7 = Sunday
+    final firstWeekday = firstDayOfMonth.weekday;
+    final isDark = AppTheme.isDarkMode(context);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${_getMonthName(now.month)} ${now.year}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Başlık
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.calendar_month,
+                  color: Colors.purple.shade700,
+                  size: 20,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            // Hafta günleri başlıkları
-            Row(
-              children: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
-                  .map((day) => Expanded(
-                        child: Center(
-                          child: Text(
-                            day,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade600,
-                            ),
+              const SizedBox(width: 10),
+              Text(
+                '${_getMonthName(now.month)} ${now.year}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$_thisMonthActiveDays aktif gün',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Hafta günleri başlıkları
+          Row(
+            children: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+                .map((day) => Expanded(
+                      child: Center(
+                        child: Text(
+                          day,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: day == 'Cmt' || day == 'Paz'
+                                ? Colors.red.shade400
+                                : Colors.grey.shade600,
                           ),
                         ),
-                      ))
-                  .toList(),
-            ),
-            const SizedBox(height: 8),
-            // Takvim günleri
-            ...List.generate((daysInMonth + firstWeekday - 1) ~/ 7 + 1, (weekIndex) {
-              return Row(
+                      ),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 10),
+          
+          // Takvim günleri
+          ...List.generate((daysInMonth + firstWeekday - 1) ~/ 7 + 1, (weekIndex) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
                 children: List.generate(7, (dayIndex) {
                   final dayNumber = weekIndex * 7 + dayIndex - firstWeekday + 2;
                   if (dayNumber < 1 || dayNumber > daysInMonth) {
@@ -568,106 +901,183 @@ class _ProgressViewState extends State<ProgressView> {
                   final isToday = date.year == now.year &&
                       date.month == now.month &&
                       date.day == now.day;
+                  final isPast = date.isBefore(DateTime(now.year, now.month, now.day));
 
                   return Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        if (!hasWorkout) {
+                        if (!hasWorkout && isPast) {
                           _showAddWorkoutDialog(date);
                         }
                       },
                       child: Container(
                         margin: const EdgeInsets.all(2),
-                        height: 40,
+                        height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          gradient: hasWorkout
+                              ? LinearGradient(
+                                  colors: [Colors.green.shade400, Colors.green.shade600],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : null,
                           color: hasWorkout
-                              ? Colors.green.shade100
-                              : Colors.grey.shade100,
+                              ? null
+                              : isToday
+                                  ? Colors.blue.shade50
+                                  : Colors.transparent,
                           border: isToday
                               ? Border.all(color: Colors.blue, width: 2)
                               : null,
+                          boxShadow: hasWorkout
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.green.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '$dayNumber',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                                  color: hasWorkout
-                                      ? Colors.green.shade700
-                                      : Colors.grey.shade600,
-                                ),
-                              ),
-                              if (hasWorkout)
-                                Container(
-                                  width: 4,
-                                  height: 4,
-                                  margin: const EdgeInsets.only(top: 2),
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                            ],
+                          child: Text(
+                            '$dayNumber',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isToday || hasWorkout ? FontWeight.bold : FontWeight.normal,
+                              color: hasWorkout
+                                  ? Colors.white
+                                  : isToday
+                                      ? Colors.blue
+                                      : isPast
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade400,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   );
                 }),
-              );
-            }),
-            const SizedBox(height: 8),
-            // Açıklama
-            Row(
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.green.shade100,
-                    border: Border.all(color: Colors.green),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Antrenman yapılan gün',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+          
+          // Açıklama
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildCalendarLegend(
+                gradient: [Colors.green.shade400, Colors.green.shade600],
+                label: 'Antrenman',
+              ),
+              const SizedBox(width: 16),
+              _buildCalendarLegend(
+                color: Colors.blue.shade50,
+                borderColor: Colors.blue,
+                label: 'Bugün',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildRecentWorkoutsList() {
-    if (_recentWorkouts.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Icon(Icons.fitness_center, size: 48, color: Colors.grey),
-              const SizedBox(height: 12),
-              const Text(
-                'Henüz antrenman kaydınız yok',
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Egzersiz önerilerinden antrenman tamamlayarak başlayın!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
+  Widget _buildCalendarLegend({
+    List<Color>? gradient,
+    Color? color,
+    Color? borderColor,
+    required String label,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: gradient != null
+                ? LinearGradient(colors: gradient)
+                : null,
+            color: color,
+            border: borderColor != null ? Border.all(color: borderColor, width: 1.5) : null,
           ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentWorkoutsList() {
+    final isDark = AppTheme.isDarkMode(context);
+    
+    if (_recentWorkouts.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.cardDark : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.fitness_center, size: 40, color: Colors.grey.shade400),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Henüz antrenman kaydınız yok',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Egzersiz önerilerinden antrenman tamamlayarak başlayın!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/home'),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Antrenman Başlat'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -678,40 +1088,199 @@ class _ProgressViewState extends State<ProgressView> {
       itemCount: _recentWorkouts.length > 10 ? 10 : _recentWorkouts.length,
       itemBuilder: (context, index) {
         final workout = _recentWorkouts[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue.shade100,
-              child: Icon(Icons.check, color: Colors.blue),
-            ),
-            title: Text(
-              _formatDate(workout.date),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        return _buildWorkoutCard(workout, index);
+      },
+    );
+  }
+
+  Widget _buildWorkoutCard(WorkoutSession workout, int index) {
+    final isDark = AppTheme.isDarkMode(context);
+    final isToday = _isToday(workout.date);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/workout-detail',
+              arguments: workout,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                const SizedBox(height: 4),
-                Text('${workout.exerciseNames.length} egzersiz'),
-                Text(
-                  _formatDuration(workout.totalDuration),
-                  style: const TextStyle(fontSize: 12),
+                // Tarih göstergesi
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isToday
+                          ? [Colors.green.shade400, Colors.green.shade600]
+                          : [Colors.blue.shade400, Colors.blue.shade600],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isToday ? Colors.green : Colors.blue).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        workout.date.day.toString(),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        _getShortMonthName(workout.date.month),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                
+                // Antrenman bilgileri
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            isToday ? 'Bugün' : _formatDate(workout.date),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          if (isToday) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'YENİ',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          _buildWorkoutInfoChip(
+                            icon: Icons.fitness_center,
+                            label: '${workout.exerciseNames.length} egzersiz',
+                            color: Colors.purple,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildWorkoutInfoChip(
+                            icon: Icons.timer,
+                            label: _formatDuration(workout.totalDuration),
+                            color: Colors.teal,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Ok
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: Colors.grey.shade500,
+                  ),
                 ),
               ],
             ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.pushNamed(
-                context,
-                '/workout-detail',
-                arguments: workout,
-              );
-            },
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  Widget _buildWorkoutInfoChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day;
+  }
+
+  String _getShortMonthName(int month) {
+    const months = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    return months[month - 1];
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {

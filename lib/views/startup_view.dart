@@ -75,8 +75,8 @@ class _StartupViewState extends State<StartupView> {
         return;
       }
 
-      // 5) Her şey tamam → egzersizlere git
-      Navigator.pushReplacementNamed(context, '/exercise-recommendations');
+      // 5) Her şey tamam → ana sayfaya git
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (_) {
       // Hata durumunda güvenli rota: welcome
       Navigator.pushReplacementNamed(context, '/welcome');
